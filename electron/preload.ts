@@ -83,6 +83,19 @@ interface ElectronAPI {
   evaluateCoaching: (statement: string, playbookId: string) => Promise<{ advice: string | null; error?: string }>
   generateQuickResponses: (question: string, context: string) => Promise<{ responses: string[]; error?: string }>
 
+  // Conversation History (Phase 4.3)
+  getConversationHistory: (limit?: number) => Promise<any[]>
+  addConversationMessage: (role: "user" | "assistant", content: string) => Promise<{ success: boolean }>
+  getConversationContext: (limit?: number) => Promise<string>
+  clearConversationHistory: () => Promise<{ success: boolean }>
+
+  // Window Management (Phase 4.2 / 4.4)
+  toggleClickThrough: () => Promise<{ isClickThrough: boolean }>
+  getAvailableDisplays: () => Promise<Array<{ id: number; label: string; width: number; height: number }>>
+  moveToDisplay: (displayId: number) => Promise<{ success: boolean }>
+  snapWindow: (position: string) => Promise<{ success: boolean }>
+  onClickThroughChanged: (callback: (isClickThrough: boolean) => void) => () => void
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
@@ -187,6 +200,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Coaching API (Phase 3)
   evaluateCoaching: (statement: string, playbookId: string) => ipcRenderer.invoke("evaluate-coaching", statement, playbookId),
   generateQuickResponses: (question: string, context: string) => ipcRenderer.invoke("generate-quick-responses", question, context),
+
+  // Conversation History (Phase 4.3)
+  getConversationHistory: (limit?: number) => ipcRenderer.invoke("get-conversation-history", limit),
+  addConversationMessage: (role: "user" | "assistant", content: string) => ipcRenderer.invoke("add-conversation-message", role, content),
+  getConversationContext: (limit?: number) => ipcRenderer.invoke("get-conversation-context", limit),
+  clearConversationHistory: () => ipcRenderer.invoke("clear-conversation-history"),
+
+  // Window Management (Phase 4.2 / 4.4)
+  toggleClickThrough: () => ipcRenderer.invoke("toggle-click-through"),
+  getAvailableDisplays: () => ipcRenderer.invoke("get-available-displays"),
+  moveToDisplay: (displayId: number) => ipcRenderer.invoke("move-to-display", displayId),
+  snapWindow: (position: string) => ipcRenderer.invoke("snap-window", position),
+  onClickThroughChanged: onIpcEvent<boolean>("click-through-changed"),
 
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args)
 } as ElectronAPI)

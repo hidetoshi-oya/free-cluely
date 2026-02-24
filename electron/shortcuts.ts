@@ -78,6 +78,12 @@ export class ShortcutsHelper {
       this.appState.moveWindowUp()
     })
 
+    // Click-through toggle (Phase 4.2)
+    globalShortcut.register("CommandOrControl+Shift+T", () => {
+      console.log("Toggle click-through mode")
+      this.appState.toggleClickThrough()
+    })
+
     globalShortcut.register("CommandOrControl+B", () => {
       this.appState.toggleMainWindow()
       // If window exists and we're showing it, bring it to front

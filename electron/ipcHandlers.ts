@@ -372,4 +372,44 @@ export function initializeIpcHandlers(appState: AppState): void {
       return { responses: [], error: error.message }
     }
   })
+
+  // === Conversation History (Phase 4.3) ===
+
+  ipcMain.handle("get-conversation-history", async (_, limit?: number) => {
+    return appState.conversationHelper.getMessages(limit)
+  })
+
+  ipcMain.handle("add-conversation-message", async (_, role: "user" | "assistant", content: string) => {
+    appState.conversationHelper.addMessage(role, content)
+    return { success: true }
+  })
+
+  ipcMain.handle("get-conversation-context", async (_, limit?: number) => {
+    return appState.conversationHelper.getContextString(limit)
+  })
+
+  ipcMain.handle("clear-conversation-history", async () => {
+    appState.conversationHelper.clear()
+    return { success: true }
+  })
+
+  // === Click-through & Window Management (Phase 4.2 / 4.4) ===
+
+  ipcMain.handle("toggle-click-through", async () => {
+    return { isClickThrough: appState.toggleClickThrough() }
+  })
+
+  ipcMain.handle("get-available-displays", async () => {
+    return appState.getAvailableDisplays()
+  })
+
+  ipcMain.handle("move-to-display", async (_, displayId: number) => {
+    appState.moveToDisplay(displayId)
+    return { success: true }
+  })
+
+  ipcMain.handle("snap-window", async (_, position: string) => {
+    appState.snapTo(position as any)
+    return { success: true }
+  })
 }

@@ -75,6 +75,19 @@ interface ElectronAPI {
   evaluateCoaching: (statement: string, playbookId: string) => Promise<{ advice: string | null; error?: string }>
   generateQuickResponses: (question: string, context: string) => Promise<{ responses: string[]; error?: string }>
 
+  // Conversation History (Phase 4.3)
+  getConversationHistory: (limit?: number) => Promise<any[]>
+  addConversationMessage: (role: "user" | "assistant", content: string) => Promise<{ success: boolean }>
+  getConversationContext: (limit?: number) => Promise<string>
+  clearConversationHistory: () => Promise<{ success: boolean }>
+
+  // Window Management (Phase 4.2 / 4.4)
+  toggleClickThrough: () => Promise<{ isClickThrough: boolean }>
+  getAvailableDisplays: () => Promise<Array<{ id: number; label: string; width: number; height: number }>>
+  moveToDisplay: (displayId: number) => Promise<{ success: boolean }>
+  snapWindow: (position: string) => Promise<{ success: boolean }>
+  onClickThroughChanged: (callback: (isClickThrough: boolean) => void) => () => void
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 

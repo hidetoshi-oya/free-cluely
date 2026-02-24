@@ -10,6 +10,7 @@ import { StorageHelper } from "./StorageHelper"
 import { MeetingHelper } from "./MeetingHelper"
 import { PlaybookHelper } from "./PlaybookHelper"
 import { CoachingHelper } from "./CoachingHelper"
+import { ConversationHelper } from "./ConversationHelper"
 
 export class AppState {
   private static instance: AppState | null = null
@@ -23,6 +24,7 @@ export class AppState {
   public meetingHelper: MeetingHelper
   public playbookHelper: PlaybookHelper
   public coachingHelper: CoachingHelper
+  public conversationHelper: ConversationHelper
   private liveTranscriptionHelper: LiveTranscriptionHelper | null = null
   private tray: Tray | null = null
 
@@ -73,6 +75,7 @@ export class AppState {
     this.meetingHelper = new MeetingHelper(this.storageHelper, chatFn)
     this.playbookHelper = new PlaybookHelper()
     this.coachingHelper = new CoachingHelper(chatFn)
+    this.conversationHelper = new ConversationHelper()
   }
 
   public static getInstance(): AppState {
@@ -196,6 +199,22 @@ export class AppState {
 
   public centerAndShowWindow(): void {
     this.windowHelper.centerAndShowWindow()
+  }
+
+  public toggleClickThrough(): boolean {
+    return this.windowHelper.toggleClickThrough()
+  }
+
+  public getAvailableDisplays() {
+    return this.windowHelper.getAvailableDisplays()
+  }
+
+  public moveToDisplay(displayId: number): void {
+    this.windowHelper.moveToDisplay(displayId)
+  }
+
+  public snapTo(position: "left" | "right" | "top-left" | "top-right" | "bottom-left" | "bottom-right"): void {
+    this.windowHelper.snapTo(position)
   }
 
   public createTray(): void {
