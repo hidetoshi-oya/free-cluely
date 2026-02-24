@@ -6,6 +6,8 @@ import { ShortcutsHelper } from "./shortcuts"
 import { ProcessingHelper } from "./ProcessingHelper"
 import { LiveTranscriptionHelper } from "./LiveTranscriptionHelper"
 import { SettingsHelper } from "./SettingsHelper"
+import { StorageHelper } from "./StorageHelper"
+import { MeetingHelper } from "./MeetingHelper"
 
 export class AppState {
   private static instance: AppState | null = null
@@ -15,6 +17,8 @@ export class AppState {
   public shortcutsHelper: ShortcutsHelper
   public processingHelper: ProcessingHelper
   public settingsHelper: SettingsHelper
+  public storageHelper: StorageHelper
+  public meetingHelper: MeetingHelper
   private liveTranscriptionHelper: LiveTranscriptionHelper | null = null
   private tray: Tray | null = null
 
@@ -51,10 +55,18 @@ export class AppState {
 
   constructor() {
     this.settingsHelper = new SettingsHelper()
+    this.storageHelper = new StorageHelper()
     this.windowHelper = new WindowHelper(this)
     this.screenshotHelper = new ScreenshotHelper(this.view)
     this.processingHelper = new ProcessingHelper(this)
     this.shortcutsHelper = new ShortcutsHelper(this)
+
+    // MeetingHelper uses the active LLM provider's chat function
+    const chatFn = async (prompt: string) => {
+      const registry = this.processingHelper.getLLMHelper().getRegistry()
+      return registry.chat(prompt)
+    }
+    this.meetingHelper = new MeetingHelper(this.storageHelper, chatFn)
   }
 
   public static getInstance(): AppState {

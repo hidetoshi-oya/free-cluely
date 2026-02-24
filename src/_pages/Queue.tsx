@@ -10,6 +10,7 @@ import {
 } from "../components/ui/toast"
 import QueueCommands from "../components/Queue/QueueCommands"
 import ModelSelector from "../components/ui/ModelSelector"
+import MeetingPanel from "../components/ui/MeetingPanel"
 
 interface QueueProps {
   setView: React.Dispatch<React.SetStateAction<"queue" | "solutions" | "debug">>
@@ -34,6 +35,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
   const chatInputRef = useRef<HTMLInputElement>(null)
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isMeetingOpen, setIsMeetingOpen] = useState(false)
   const [currentModel, setCurrentModel] = useState<{ provider: string; model: string }>({ provider: "gemini", model: "gemini-3-pro-preview" })
 
   const barRef = useRef<HTMLDivElement>(null)
@@ -203,7 +205,11 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
     setIsSettingsOpen(!isSettingsOpen)
   }
 
-  const handleModelChange = (provider: "ollama" | "gemini", model: string) => {
+  const handleMeetingToggle = () => {
+    setIsMeetingOpen(!isMeetingOpen)
+  }
+
+  const handleModelChange = (provider: string, model: string) => {
     setCurrentModel({ provider, model })
     // Update chat messages to reflect the model change
     const modelName = provider === "ollama" ? model : "Gemini 3 Pro"
@@ -241,6 +247,7 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
               onTooltipVisibilityChange={handleTooltipVisibilityChange}
               onChatToggle={handleChatToggle}
               onSettingsToggle={handleSettingsToggle}
+              onMeetingToggle={handleMeetingToggle}
             />
           </div>
           {/* Conditional Settings Interface */}
@@ -249,7 +256,14 @@ const Queue: React.FC<QueueProps> = ({ setView }) => {
               <ModelSelector onModelChange={handleModelChange} onChatOpen={() => setIsChatOpen(true)} />
             </div>
           )}
-          
+
+          {/* Conditional Meeting Panel */}
+          {isMeetingOpen && (
+            <div className="mt-4 w-full mx-auto">
+              <MeetingPanel />
+            </div>
+          )}
+
           {/* Conditional Chat Interface */}
           {isChatOpen && (
             <div className="mt-4 w-full mx-auto liquid-glass chat-container p-4 flex flex-col">

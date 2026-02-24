@@ -58,6 +58,20 @@ interface ElectronAPI {
   onSpeakerTranscription: (callback: (data: { text: string; isFinal: boolean; timestamp: number }) => void) => () => void
   onSpeakerTranscriptionStatus: (callback: (data: { status: string }) => void) => () => void
 
+  // Meeting Management (Phase 2)
+  startMeeting: (title?: string) => Promise<{ success: boolean; meeting?: any; error?: string }>
+  endMeeting: () => Promise<{ success: boolean; meeting?: any; error?: string }>
+  getCurrentMeeting: () => Promise<any>
+  getMeeting: (id: string) => Promise<any>
+  getMeetingHistory: () => Promise<any[]>
+  deleteMeeting: (id: string) => Promise<{ success: boolean }>
+  searchMeetings: (query: string) => Promise<any[]>
+  generateMeetingSummary: (meetingId: string) => Promise<{ success: boolean; summary?: string; error?: string }>
+  extractActionItems: (meetingId: string) => Promise<{ success: boolean; items?: any[]; error?: string }>
+  addTranscriptionEntry: (meetingId: string, entry: any) => Promise<{ success: boolean; error?: string }>
+  onMeetingContextUpdate: (callback: (data: any) => void) => () => void
+  onMeetingError: (callback: (error: string) => void) => () => void
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
@@ -137,6 +151,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sendSpeakerAudioChunk: (base64Pcm: string) => ipcRenderer.send("speaker-audio-chunk", base64Pcm),
   onSpeakerTranscription: onIpcEvent<{ text: string; isFinal: boolean; timestamp: number }>("speaker-transcription"),
   onSpeakerTranscriptionStatus: onIpcEvent<{ status: string }>("speaker-transcription-status"),
+
+  // Meeting Management (Phase 2)
+  startMeeting: (title?: string) => ipcRenderer.invoke("start-meeting", title),
+  endMeeting: () => ipcRenderer.invoke("end-meeting"),
+  getCurrentMeeting: () => ipcRenderer.invoke("get-current-meeting"),
+  getMeeting: (id: string) => ipcRenderer.invoke("get-meeting", id),
+  getMeetingHistory: () => ipcRenderer.invoke("get-meeting-history"),
+  deleteMeeting: (id: string) => ipcRenderer.invoke("delete-meeting", id),
+  searchMeetings: (query: string) => ipcRenderer.invoke("search-meetings", query),
+  generateMeetingSummary: (meetingId: string) => ipcRenderer.invoke("generate-meeting-summary", meetingId),
+  extractActionItems: (meetingId: string) => ipcRenderer.invoke("extract-action-items", meetingId),
+  addTranscriptionEntry: (meetingId: string, entry: any) => ipcRenderer.invoke("add-transcription-entry", meetingId, entry),
+  onMeetingContextUpdate: onIpcEvent<any>("meeting-context-update"),
+  onMeetingError: onIpcEvent<string>("meeting-error"),
 
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args)
 } as ElectronAPI)

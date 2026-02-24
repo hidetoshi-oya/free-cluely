@@ -247,4 +247,79 @@ export function initializeIpcHandlers(appState: AppState): void {
       return []
     }
   })
+
+  // === Meeting Management API (Phase 2) ===
+
+  ipcMain.handle("start-meeting", async (_, title?: string) => {
+    try {
+      const record = appState.meetingHelper.startMeeting(title)
+      return { success: true, meeting: record }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("end-meeting", async () => {
+    try {
+      const record = await appState.meetingHelper.endMeeting()
+      return { success: true, meeting: record }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("get-current-meeting", async () => {
+    return appState.meetingHelper.getCurrentMeeting()
+  })
+
+  ipcMain.handle("get-meeting", async (_, id: string) => {
+    return appState.storageHelper.getMeeting(id)
+  })
+
+  ipcMain.handle("get-meeting-history", async () => {
+    return appState.storageHelper.listMeetings()
+  })
+
+  ipcMain.handle("delete-meeting", async (_, id: string) => {
+    return { success: appState.storageHelper.deleteMeeting(id) }
+  })
+
+  ipcMain.handle("search-meetings", async (_, query: string) => {
+    return appState.storageHelper.searchMeetings(query)
+  })
+
+  ipcMain.handle("generate-meeting-summary", async (_, meetingId: string) => {
+    try {
+      const summary = await appState.meetingHelper.generateSummary(meetingId)
+      return { success: true, summary }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("extract-action-items", async (_, meetingId: string) => {
+    try {
+      const items = await appState.meetingHelper.extractActionItems(meetingId)
+      return { success: true, items }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("add-transcription-entry", async (_, meetingId: string, entry: any) => {
+    try {
+      appState.storageHelper.addTranscriptionEntry(meetingId, entry)
+
+      // Emit context update to renderer
+      const mainWindow = appState.getMainWindow()
+      const record = appState.storageHelper.getMeeting(meetingId)
+      if (mainWindow && record) {
+        mainWindow.webContents.send("meeting-context-update", record)
+      }
+
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
 }

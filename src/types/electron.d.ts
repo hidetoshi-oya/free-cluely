@@ -50,6 +50,20 @@ interface ElectronAPI {
   onSpeakerTranscription: (callback: (data: { text: string; isFinal: boolean; timestamp: number }) => void) => () => void
   onSpeakerTranscriptionStatus: (callback: (data: { status: "connected" | "disconnected" }) => void) => () => void
 
+  // Meeting Management (Phase 2)
+  startMeeting: (title?: string) => Promise<{ success: boolean; meeting?: any; error?: string }>
+  endMeeting: () => Promise<{ success: boolean; meeting?: any; error?: string }>
+  getCurrentMeeting: () => Promise<any>
+  getMeeting: (id: string) => Promise<any>
+  getMeetingHistory: () => Promise<any[]>
+  deleteMeeting: (id: string) => Promise<{ success: boolean }>
+  searchMeetings: (query: string) => Promise<any[]>
+  generateMeetingSummary: (meetingId: string) => Promise<{ success: boolean; summary?: string; error?: string }>
+  extractActionItems: (meetingId: string) => Promise<{ success: boolean; items?: any[]; error?: string }>
+  addTranscriptionEntry: (meetingId: string, entry: any) => Promise<{ success: boolean; error?: string }>
+  onMeetingContextUpdate: (callback: (data: any) => void) => () => void
+  onMeetingError: (callback: (error: string) => void) => () => void
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
