@@ -12,8 +12,9 @@ If you’re looking for a hosted desktop recording API, consider checking out [R
 ### 前提条件
 
 - Node.js（最新LTS）
+- pnpm
 - Git
-- **いずれか**: Gemini APIキー（[Google AI Studio](https://makersuite.google.com/app/apikey) で取得）**または** ローカルAI用の [Ollama](https://ollama.ai)
+- **いずれか**: Gemini / OpenAI / Claude APIキー **または** ローカルAI用の [Ollama](https://ollama.ai)
 
 ### インストール
 
@@ -31,19 +32,25 @@ pnpm rebuild sharp
 
 ### 環境変数の設定
 
-ルートに `.env` ファイルを作成:
+ルートに `.env` ファイルを作成。使いたいプロバイダのキーだけ設定すればOK:
 
-**Gemini（クラウドAI）の場合:**
 ```env
-GEMINI_API_KEY=your_api_key_here
-```
+# Google Gemini（デフォルト）
+GEMINI_API_KEY=your_gemini_api_key
 
-**Ollama（ローカルAI）の場合:**
-```env
+# OpenAI（Whisper文字起こし含む）
+OPENAI_API_KEY=your_openai_api_key
+
+# Anthropic Claude
+ANTHROPIC_API_KEY=your_claude_api_key
+
+# Ollama（ローカルAI - APIキー不要）
 USE_OLLAMA=true
 OLLAMA_MODEL=llama3.2
 OLLAMA_URL=http://localhost:11434
 ```
+
+APIキーはアプリ内のModels設定画面からも入力可能（OS Keychainに暗号化保存）。
 
 ### 起動
 
@@ -57,11 +64,13 @@ pnpm dist
 
 ## AIプロバイダ
 
+4つのLLMプロバイダーに対応。アプリ内UIまたは`.env`でいつでも切替可能。
+
 ### Ollama（プライバシー重視ならこっち）
 
 - データが外に出ない（100%ローカル処理）
 - API費用ゼロ、オフライン動作可
-- llama3.2, codellama, mistral等に対応
+- llama3.2, llama3.2-vision, codellama, mistral等に対応
 
 ```bash
 # セットアップ
@@ -71,8 +80,20 @@ ollama pull llama3.2
 ### Google Gemini
 
 - 最新のAI技術、最速レスポンス
-- 複雑なタスクで最高精度
-- 要APIキー・インターネット接続、データはGoogleサーバーに送信
+- 音声分析・リアルタイム文字起こし対応（Live API）
+- 要APIキー・インターネット接続
+
+### OpenAI
+
+- GPT-4o / GPT-5-mini 対応
+- Whisper APIによる50+言語文字起こし
+- 要APIキー
+
+### Anthropic Claude
+
+- Claude Sonnet 4.6 / Opus 4.6 / Haiku 4.5 対応
+- 高精度なテキスト分析
+- 要APIキー
 
 ## キーボードショートカット
 
@@ -80,9 +101,11 @@ ollama pull llama3.2
 |---------------|------|
 | `Cmd/Ctrl + Shift + Space` | ウィンドウ表示・中央に配置 |
 | `Cmd/Ctrl + H` | スクリーンショット撮影 |
+| `Cmd/Ctrl + Shift + H` | 画面領域キャプチャ（矩形選択） |
 | `Cmd/Ctrl + Enter` | ソリューション取得 |
 | `Cmd/Ctrl + B` | ウィンドウの表示/非表示切替 |
 | `Cmd/Ctrl + R` | キュー全クリア |
+| `Cmd/Ctrl + Shift + T` | クリックスルーモード切替 |
 | `Cmd/Ctrl + 矢印キー` | ウィンドウ移動 |
 
 ## 主な機能
@@ -90,27 +113,47 @@ ollama pull llama3.2
 ### 透明AIアシスタント
 - 半透明・常に最前面のオーバーレイウィンドウ
 - グローバルホットキーで即座に表示/非表示
-- 全アプリケーション上で動作
+- クリックスルーモード（`Cmd+Shift+T`）でウィンドウを透過
+- マルチモニター対応（ディスプレイ間移動・スナップ配置）
 
 ### スクリーンショット分析
 - `Cmd/Ctrl + H` で画面キャプチャ
+- `Cmd/Ctrl + Shift + H` で画面領域を矩形選択してキャプチャ
 - 画像・ドキュメント・プレゼン・コードをAIが即座に分析
-- 解説・回答・ソリューションをリアルタイムで返答
 
-### 音声分析
-- 音声ファイル・録音の処理
-- リアルタイム文字起こし・分析
-- ミーティング議事録やコンテンツレビューに最適
+### ミーティングインテリジェンス
+- ミーティング開始/停止でセッション管理
+- デュアルストリーム文字起こし（マイク + システム音声）
+- Map-Reduceチャンク分割による長時間ミーティング要約
+- アクションアイテム自動抽出（担当者・期限付き）
+- ミーティング履歴の検索・エクスポート（Markdown / JSON / クリップボード）
+
+### リアルタイムコーチング
+- Playbookベースのコーチング（ビルトイン6種 + カスタム作成）
+- 10秒クールダウン付きのライブアドバイス
+- クイック回答提案（質問検出 → 2-3個の回答候補）
+
+### 多言語文字起こし
+- OpenAI Whisper API対応（50+言語、自動言語検出）
+- Gemini Live APIによるリアルタイム文字起こし
+
+### カレンダー連携
+- ICSフィード読み込み
+- イベントタイトルからPlaybook自動選択
+- 5分前通知対応のイベント検出
 
 ### コンテキストチャット
 - 画面上のコンテンツについてAIとチャット
-- 会話コンテキストを保持
-- フォローアップで深掘り
+- 会話履歴の永続化（直近50メッセージ）
+
+### Webhook連携
+- ミーティング終了時にJSON POSTで外部通知
+- Slack / Zapier / n8n等と連携可能
 
 ### プライバシーファースト
 - Ollamaで100%ローカル処理が可能
+- APIキーはOS Keychain（safeStorage）で暗号化保存
 - スクリーンショットは処理後に自動削除
-- データのトラッキング・保存なし
 
 ### クロスプラットフォーム
 - **macOS**: ネイティブウィンドウ管理
@@ -136,22 +179,22 @@ ollama pull llama3.2
 
 ## 他サービスとの比較
 
-| 項目 | Free Cluely | 商用サービス |
-|------|-------------|-------------|
-| 費用 | 無料 | $29-99/月 |
-| プライバシー | ローカルAI対応 | クラウドのみ |
-| オープンソース | 完全公開 | クローズド |
-| カスタマイズ | 自由 | 制限あり |
-| データ管理 | 自分で管理 | 第三者サーバー |
-| オフライン | 可（Ollama） | 不可 |
+| 項目 | Free Cluely | Cluely | Pluely | Granola |
+|------|-------------|--------|--------|---------|
+| 費用 | **無料OSS** | $20-75/mo | 無料OSS | $18/mo |
+| LLM | **Gemini/OpenAI/Claude/Ollama** | GPT-4o+Claude | マルチ | GPT-4o+Claude |
+| ローカルAI | **Ollama Vision対応** | なし | Ollama | なし |
+| リアルタイム要約 | **対応 + アクション抽出** | 対応 | 非対応 | Post-call |
+| コーチング | **Playbook + AI提案** | テンプレート | 非対応 | 非対応 |
+| APIキー管理 | **OS Keychain暗号化** | 自社サーバー | BYOK | 自社サーバー |
 
 ## 対応AIモデル
 
-- **Gemini 2.0 Flash** - Google最新AI（画像認識対応）
-- **Llama 3.2** - Meta製ローカルモデル（Ollama経由）
-- **CodeLlama** - コーディング特化
-- **Mistral** - 軽量・高速
-- **カスタムモデル** - Ollama互換モデル全般
+- **Gemini 2.5 Flash / Pro** - Google最新AI（画像・音声・リアルタイム文字起こし対応）
+- **GPT-4o / GPT-5-mini** - OpenAI（Whisper文字起こし対応）
+- **Claude Sonnet 4.6 / Opus 4.6 / Haiku 4.5** - Anthropic
+- **Llama 3.2 / Llama 3.2 Vision** - Meta製ローカルモデル（Ollama経由）
+- **カスタムモデル** - Ollama互換モデル全般（qwen3, codellama, mistral等）
 
 ## システム要件
 
