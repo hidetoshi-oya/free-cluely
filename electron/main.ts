@@ -11,6 +11,8 @@ import { MeetingHelper } from "./MeetingHelper"
 import { PlaybookHelper } from "./PlaybookHelper"
 import { CoachingHelper } from "./CoachingHelper"
 import { ConversationHelper } from "./ConversationHelper"
+import { ExportHelper } from "./ExportHelper"
+import { WebhookHelper } from "./WebhookHelper"
 
 export class AppState {
   private static instance: AppState | null = null
@@ -25,6 +27,8 @@ export class AppState {
   public playbookHelper: PlaybookHelper
   public coachingHelper: CoachingHelper
   public conversationHelper: ConversationHelper
+  public exportHelper: ExportHelper
+  public webhookHelper: WebhookHelper
   private liveTranscriptionHelper: LiveTranscriptionHelper | null = null
   private tray: Tray | null = null
 
@@ -76,6 +80,8 @@ export class AppState {
     this.playbookHelper = new PlaybookHelper()
     this.coachingHelper = new CoachingHelper(chatFn)
     this.conversationHelper = new ConversationHelper()
+    this.exportHelper = new ExportHelper(this.storageHelper)
+    this.webhookHelper = new WebhookHelper()
   }
 
   public static getInstance(): AppState {

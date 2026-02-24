@@ -96,6 +96,16 @@ interface ElectronAPI {
   snapWindow: (position: string) => Promise<{ success: boolean }>
   onClickThroughChanged: (callback: (isClickThrough: boolean) => void) => () => void
 
+  // Export API (Phase 5.2)
+  exportMeetingMarkdown: (meetingId: string) => Promise<{ success: boolean; markdown?: string; error?: string }>
+  exportMeetingClipboard: (meetingId: string) => Promise<{ success: boolean }>
+  exportMeetingJSON: (meetingId: string) => Promise<{ success: boolean; json?: string; error?: string }>
+
+  // Webhook API (Phase 5.3)
+  setWebhookUrl: (url: string | null) => Promise<{ success: boolean }>
+  getWebhookUrl: () => Promise<{ url: string | null }>
+  testWebhook: () => Promise<{ success: boolean; error?: string }>
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
@@ -213,6 +223,16 @@ contextBridge.exposeInMainWorld("electronAPI", {
   moveToDisplay: (displayId: number) => ipcRenderer.invoke("move-to-display", displayId),
   snapWindow: (position: string) => ipcRenderer.invoke("snap-window", position),
   onClickThroughChanged: onIpcEvent<boolean>("click-through-changed"),
+
+  // Export API (Phase 5.2)
+  exportMeetingMarkdown: (meetingId: string) => ipcRenderer.invoke("export-meeting-markdown", meetingId),
+  exportMeetingClipboard: (meetingId: string) => ipcRenderer.invoke("export-meeting-clipboard", meetingId),
+  exportMeetingJSON: (meetingId: string) => ipcRenderer.invoke("export-meeting-json", meetingId),
+
+  // Webhook API (Phase 5.3)
+  setWebhookUrl: (url: string | null) => ipcRenderer.invoke("set-webhook-url", url),
+  getWebhookUrl: () => ipcRenderer.invoke("get-webhook-url"),
+  testWebhook: () => ipcRenderer.invoke("test-webhook"),
 
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args)
 } as ElectronAPI)

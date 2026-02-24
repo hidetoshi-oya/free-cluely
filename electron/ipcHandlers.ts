@@ -1,6 +1,7 @@
 import { ipcMain, app } from "electron"
 import { AppState } from "./main"
 import { GeminiProvider, OpenAIProvider, ClaudeProvider, OllamaProvider } from "./llm"
+import type { MeetingRecord } from "./StorageHelper"
 
 export function initializeIpcHandlers(appState: AppState): void {
   ipcMain.handle(
@@ -411,5 +412,47 @@ export function initializeIpcHandlers(appState: AppState): void {
   ipcMain.handle("snap-window", async (_, position: string) => {
     appState.snapTo(position as any)
     return { success: true }
+  })
+
+  // === Export API (Phase 5.2) ===
+
+  ipcMain.handle("export-meeting-markdown", async (_, meetingId: string) => {
+    const md = appState.exportHelper.toMarkdown(meetingId)
+    return md ? { success: true, markdown: md } : { success: false, error: "Meeting not found" }
+  })
+
+  ipcMain.handle("export-meeting-clipboard", async (_, meetingId: string) => {
+    return { success: appState.exportHelper.copyToClipboard(meetingId) }
+  })
+
+  ipcMain.handle("export-meeting-json", async (_, meetingId: string) => {
+    const json = appState.exportHelper.toJSON(meetingId)
+    return json ? { success: true, json } : { success: false, error: "Meeting not found" }
+  })
+
+  // === Webhook API (Phase 5.3) ===
+
+  ipcMain.handle("set-webhook-url", async (_, url: string | null) => {
+    appState.webhookHelper.setWebhookUrl(url)
+    return { success: true }
+  })
+
+  ipcMain.handle("get-webhook-url", async () => {
+    return { url: appState.webhookHelper.getWebhookUrl() }
+  })
+
+  ipcMain.handle("test-webhook", async () => {
+    const testMeeting: MeetingRecord = {
+      id: "test",
+      title: "Webhook Test",
+      startedAt: Date.now(),
+      endedAt: Date.now(),
+      entries: [],
+      summary: "This is a test webhook delivery.",
+      actionItems: [],
+      chunkSummaries: [],
+      metadata: { language: "en-US", providerId: "test", modelId: "test" },
+    }
+    return appState.webhookHelper.sendMeetingEnded(testMeeting)
   })
 }
