@@ -13,6 +13,9 @@ import { CoachingHelper } from "./CoachingHelper"
 import { ConversationHelper } from "./ConversationHelper"
 import { ExportHelper } from "./ExportHelper"
 import { WebhookHelper } from "./WebhookHelper"
+import { RegionSelectHelper } from "./RegionSelectHelper"
+import { WhisperTranscriptionHelper } from "./WhisperTranscriptionHelper"
+import { CalendarHelper } from "./CalendarHelper"
 
 export class AppState {
   private static instance: AppState | null = null
@@ -29,6 +32,9 @@ export class AppState {
   public conversationHelper: ConversationHelper
   public exportHelper: ExportHelper
   public webhookHelper: WebhookHelper
+  public regionSelectHelper: RegionSelectHelper
+  public calendarHelper: CalendarHelper
+  private whisperHelper: WhisperTranscriptionHelper | null = null
   private liveTranscriptionHelper: LiveTranscriptionHelper | null = null
   private tray: Tray | null = null
 
@@ -82,6 +88,15 @@ export class AppState {
     this.conversationHelper = new ConversationHelper()
     this.exportHelper = new ExportHelper(this.storageHelper)
     this.webhookHelper = new WebhookHelper()
+    this.regionSelectHelper = new RegionSelectHelper()
+    this.calendarHelper = new CalendarHelper()
+
+    // Setup default playbook mappings for calendar events
+    this.calendarHelper.setPlaybookMapping("standup", "team-standup")
+    this.calendarHelper.setPlaybookMapping("interview", "technical-interview")
+    this.calendarHelper.setPlaybookMapping("sales", "sales-call")
+    this.calendarHelper.setPlaybookMapping("pitch", "vc-pitch")
+    this.calendarHelper.setPlaybookMapping("customer", "customer-success")
   }
 
   public static getInstance(): AppState {
@@ -289,6 +304,13 @@ export class AppState {
     if (!apiKey) return null
     this.liveTranscriptionHelper ??= new LiveTranscriptionHelper(apiKey)
     return this.liveTranscriptionHelper
+  }
+
+  public getWhisperHelper(): WhisperTranscriptionHelper | null {
+    const apiKey = this.settingsHelper.getApiKey("openai") || process.env.OPENAI_API_KEY
+    if (!apiKey) return null
+    this.whisperHelper ??= new WhisperTranscriptionHelper(apiKey)
+    return this.whisperHelper
   }
 }
 

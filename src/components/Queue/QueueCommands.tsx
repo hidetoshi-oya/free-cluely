@@ -133,6 +133,26 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
           </button>
         </div>
 
+        {/* Region Capture Button */}
+        <div className="flex items-center gap-2">
+          <button
+            className="bg-white/10 hover:bg-white/20 transition-colors rounded-md px-2 py-1 text-[11px] leading-none text-white/70 flex items-center gap-1"
+            onClick={async () => {
+              try {
+                const result = await window.electronAPI.startRegionCapture()
+                if (result.success) {
+                  // Region added to queue via screenshot-taken event from shortcut handler
+                }
+              } catch (err) {
+                console.error("Region capture failed:", err)
+              }
+            }}
+            type="button"
+          >
+            ✂️ Region
+          </button>
+        </div>
+
         {/* Chat Button */}
         <div className="flex items-center gap-2">
           <button
@@ -220,6 +240,27 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
                         Take a screenshot of the problem description. The tool
                         will extract and analyze the problem. The 5 latest
                         screenshots are saved.
+                      </p>
+                    </div>
+
+                    {/* Region Capture Command */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="truncate">Region Capture</span>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                            ⌘
+                          </span>
+                          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                            ⇧
+                          </span>
+                          <span className="bg-white/10 px-1.5 py-0.5 rounded text-[10px] leading-none">
+                            H
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] leading-relaxed text-white/70 truncate">
+                        Select and capture a specific region of the screen.
                       </p>
                     </div>
 

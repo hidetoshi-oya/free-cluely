@@ -106,6 +106,22 @@ interface ElectronAPI {
   getWebhookUrl: () => Promise<{ url: string | null }>
   testWebhook: () => Promise<{ success: boolean; error?: string }>
 
+  // Whisper Transcription API (Phase 4.5)
+  whisperTranscribe: (filePath: string, options?: { language?: string; prompt?: string }) => Promise<{ success: boolean; text?: string; timestamp?: number; error?: string }>
+  whisperTranscribeVerbose: (filePath: string, options?: { language?: string; prompt?: string }) => Promise<{ success: boolean; text?: string; detectedLanguage?: string; duration?: number; timestamp?: number; error?: string }>
+  getWhisperLanguages: () => Promise<string[]>
+
+  // Calendar API (Phase 5.1)
+  getUpcomingEvents: () => Promise<any[]>
+  getNextEvent: () => Promise<any | null>
+  getImminentEvents: (minutes?: number) => Promise<any[]>
+  addCalendarEvent: (event: any) => Promise<{ success: boolean; error?: string }>
+  importICS: (icsText: string) => Promise<{ success: boolean; count?: number; error?: string }>
+  suggestPlaybookForEvent: (eventTitle: string) => Promise<{ playbookId: string | null }>
+
+  // Region Capture API (Phase 4.1)
+  startRegionCapture: () => Promise<{ success: boolean; path?: string; preview?: string; error?: string }>
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
@@ -233,6 +249,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setWebhookUrl: (url: string | null) => ipcRenderer.invoke("set-webhook-url", url),
   getWebhookUrl: () => ipcRenderer.invoke("get-webhook-url"),
   testWebhook: () => ipcRenderer.invoke("test-webhook"),
+
+  // Whisper Transcription API (Phase 4.5)
+  whisperTranscribe: (filePath: string, options?: { language?: string; prompt?: string }) => ipcRenderer.invoke("whisper-transcribe", filePath, options),
+  whisperTranscribeVerbose: (filePath: string, options?: { language?: string; prompt?: string }) => ipcRenderer.invoke("whisper-transcribe-verbose", filePath, options),
+  getWhisperLanguages: () => ipcRenderer.invoke("get-whisper-languages"),
+
+  // Calendar API (Phase 5.1)
+  getUpcomingEvents: () => ipcRenderer.invoke("get-upcoming-events"),
+  getNextEvent: () => ipcRenderer.invoke("get-next-event"),
+  getImminentEvents: (minutes?: number) => ipcRenderer.invoke("get-imminent-events", minutes),
+  addCalendarEvent: (event: any) => ipcRenderer.invoke("add-calendar-event", event),
+  importICS: (icsText: string) => ipcRenderer.invoke("import-ics", icsText),
+  suggestPlaybookForEvent: (eventTitle: string) => ipcRenderer.invoke("suggest-playbook-for-event", eventTitle),
+
+  // Region Capture API (Phase 4.1)
+  startRegionCapture: () => ipcRenderer.invoke("start-region-capture"),
 
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args)
 } as ElectronAPI)

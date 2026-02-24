@@ -98,6 +98,22 @@ interface ElectronAPI {
   getWebhookUrl: () => Promise<{ url: string | null }>
   testWebhook: () => Promise<{ success: boolean; error?: string }>
 
+  // Whisper Transcription API (Phase 4.5)
+  whisperTranscribe: (filePath: string, options?: { language?: string; prompt?: string }) => Promise<{ success: boolean; text?: string; timestamp?: number; error?: string }>
+  whisperTranscribeVerbose: (filePath: string, options?: { language?: string; prompt?: string }) => Promise<{ success: boolean; text?: string; detectedLanguage?: string; duration?: number; timestamp?: number; error?: string }>
+  getWhisperLanguages: () => Promise<string[]>
+
+  // Calendar API (Phase 5.1)
+  getUpcomingEvents: () => Promise<any[]>
+  getNextEvent: () => Promise<any | null>
+  getImminentEvents: (minutes?: number) => Promise<any[]>
+  addCalendarEvent: (event: any) => Promise<{ success: boolean; error?: string }>
+  importICS: (icsText: string) => Promise<{ success: boolean; count?: number; error?: string }>
+  suggestPlaybookForEvent: (eventTitle: string) => Promise<{ playbookId: string | null }>
+
+  // Region Capture API (Phase 4.1)
+  startRegionCapture: () => Promise<{ success: boolean; path?: string; preview?: string; error?: string }>
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 

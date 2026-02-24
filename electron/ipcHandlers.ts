@@ -455,4 +455,102 @@ export function initializeIpcHandlers(appState: AppState): void {
     }
     return appState.webhookHelper.sendMeetingEnded(testMeeting)
   })
+
+  // === Whisper Transcription API (Phase 4.5) ===
+
+  ipcMain.handle("whisper-transcribe", async (_, filePath: string, options?: { language?: string; prompt?: string }) => {
+    try {
+      const whisperHelper = appState.getWhisperHelper()
+      if (!whisperHelper) {
+        return { success: false, error: "OpenAI API key not configured for Whisper" }
+      }
+      const result = await whisperHelper.transcribe(filePath, options)
+      return { success: true, ...result }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("whisper-transcribe-verbose", async (_, filePath: string, options?: { language?: string; prompt?: string }) => {
+    try {
+      const whisperHelper = appState.getWhisperHelper()
+      if (!whisperHelper) {
+        return { success: false, error: "OpenAI API key not configured for Whisper" }
+      }
+      const result = await whisperHelper.transcribeVerbose(filePath, options)
+      return { success: true, ...result }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("get-whisper-languages", async () => {
+    const { WhisperTranscriptionHelper } = await import("./WhisperTranscriptionHelper")
+    return WhisperTranscriptionHelper.getSupportedLanguages()
+  })
+
+  // === Calendar API (Phase 5.1) ===
+
+  ipcMain.handle("get-upcoming-events", async () => {
+    return appState.calendarHelper.getUpcomingEvents()
+  })
+
+  ipcMain.handle("get-next-event", async () => {
+    return appState.calendarHelper.getNextEvent()
+  })
+
+  ipcMain.handle("get-imminent-events", async (_, minutes?: number) => {
+    return appState.calendarHelper.getImminentEvents(minutes ?? 5)
+  })
+
+  ipcMain.handle("add-calendar-event", async (_, event: any) => {
+    try {
+      appState.calendarHelper.addEvent(event)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("import-ics", async (_, icsText: string) => {
+    try {
+      const { CalendarHelper } = await import("./CalendarHelper")
+      const events = CalendarHelper.parseICS(icsText)
+      for (const event of events) {
+        appState.calendarHelper.addEvent(event)
+      }
+      return { success: true, count: events.length }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("suggest-playbook-for-event", async (_, eventTitle: string) => {
+    return { playbookId: appState.calendarHelper.suggestPlaybook(eventTitle) ?? null }
+  })
+
+  // === Region Capture API (Phase 4.1) ===
+
+  ipcMain.handle("start-region-capture", async () => {
+    try {
+      // Hide main window during capture
+      appState.hideMainWindow()
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      const result = await appState.regionSelectHelper.startCapture()
+
+      // Show main window again
+      appState.showMainWindow()
+
+      if (!result) {
+        return { success: false, error: "Region capture cancelled" }
+      }
+
+      return { success: true, path: result.path, preview: result.preview }
+    } catch (error: any) {
+      appState.showMainWindow()
+      console.error("Error in region capture:", error)
+      return { success: false, error: error.message }
+    }
+  })
 }
