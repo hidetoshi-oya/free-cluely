@@ -12,8 +12,10 @@ If you’re looking for a hosted desktop recording API, consider checking out [R
 ### 前提条件
 
 - Node.js（最新LTS）
+- pnpm
 - Git
 - **いずれか**: Gemini APIキー（[Google AI Studio](https://makersuite.google.com/app/apikey) で取得）**または** ローカルAI用の [Ollama](https://ollama.ai)
+- **音声文字起こし（任意）**: AmiVoice Cloud Platform APIキー（[AmiVoice](https://acp.amivoice.com/) で取得）
 
 ### インストール
 
@@ -31,18 +33,19 @@ pnpm rebuild sharp
 
 ### 環境変数の設定
 
-ルートに `.env` ファイルを作成:
+ルートに `.env` ファイルを作成（`.env.example`を参考に）:
 
-**Gemini（クラウドAI）の場合:**
 ```env
+# Gemini API Key (LLM用)
 GEMINI_API_KEY=your_api_key_here
-```
 
-**Ollama（ローカルAI）の場合:**
-```env
-USE_OLLAMA=true
-OLLAMA_MODEL=llama3.2
-OLLAMA_URL=http://localhost:11434
+# AmiVoice Cloud Platform (リアルタイム音声文字起こし用、任意)
+AMIVOICE_APPKEY=your_amivoice_appkey
+
+# Ollama (ローカルLLM、任意)
+# USE_OLLAMA=true
+# OLLAMA_MODEL=llama3.2
+# OLLAMA_URL=http://localhost:11434
 ```
 
 ### 起動
@@ -97,10 +100,11 @@ ollama pull llama3.2
 - 画像・ドキュメント・プレゼン・コードをAIが即座に分析
 - 解説・回答・ソリューションをリアルタイムで返答
 
-### 音声分析
-- 音声ファイル・録音の処理
-- リアルタイム文字起こし・分析
-- ミーティング議事録やコンテンツレビューに最適
+### リアルタイム音声文字起こし
+- AmiVoice Cloud Platformによるリアルタイム音声認識
+- デュアルストリーム: マイク（Web Speech API）+ システム音声（AmiVoice）
+- 自動リトライ付きWebSocket接続（最大3回、指数バックオフ）
+- 音声ファイルの分析にも対応
 
 ### コンテキストチャット
 - 画面上のコンテンツについてAIとチャット
