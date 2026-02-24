@@ -91,7 +91,7 @@ export class WindowHelper {
       hasShadow: false,
       backgroundColor: "#00000000",
       focusable: true,
-      resizable: true,
+      resizable: false, // transparent + resizable = black bg bug in Electron 38+ (#48421)
       movable: true,
       x: 100, // Start at a visible position
       y: 100
@@ -216,6 +216,7 @@ export class WindowHelper {
     }
 
     this.mainWindow.showInactive()
+    this.mainWindow.setContentProtection(true) // re-apply after show (Electron 34+ bug #45844)
 
     this.isWindowVisible = true
   }
@@ -270,8 +271,9 @@ export class WindowHelper {
     this.mainWindow.show()
     this.mainWindow.focus()
     this.mainWindow.setAlwaysOnTop(true)
+    this.mainWindow.setContentProtection(true) // re-apply after show (Electron 34+ bug #45844)
     this.isWindowVisible = true
-    
+
     console.log(`Window centered and shown`)
   }
 
