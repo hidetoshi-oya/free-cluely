@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react"
 import { IoLogOutOutline } from "react-icons/io5"
-import { Dialog, DialogContent, DialogClose } from "../ui/dialog"
+import { useSpeechRecognition } from "../../hooks/useSpeechRecognition"
+import { useSpeakerTranscription } from "../../hooks/useSpeakerTranscription"
+import { useTranscriptionEntries } from "../../hooks/useTranscriptionEntries"
+import TranscriptionDisplay from "../ui/TranscriptionDisplay"
 
 interface QueueCommandsProps {
   onTooltipVisibilityChange: (visible: boolean, height: number) => void
@@ -21,7 +24,9 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioResult, setAudioResult] = useState<string | null>(null)
   const chunks = useRef<Blob[]>([])
-  // Remove all chat-related state, handlers, and the Dialog overlay from this file.
+  const { transcript, interimText, isListening, start: startRecognition, stop: stopRecognition, isSupported: speechSupported } = useSpeechRecognition()
+  const { transcript: speakerTranscript, interimText: speakerInterim, isListening: isSpeakerListening, start: startSpeaker, stop: stopSpeaker } = useSpeakerTranscription()
+  const { entries, reset: resetEntries } = useTranscriptionEntries(transcript, speakerTranscript)
 
   useEffect(() => {
     let tooltipHeight = 0
@@ -63,19 +68,22 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
         }
         setMediaRecorder(recorder)
         recorder.start()
+        if (speechSupported) startRecognition()
+        startSpeaker()
         setIsRecording(true)
+        resetEntries()
       } catch (err) {
         setAudioResult('Could not start recording.')
       }
     } else {
       // Stop recording
       mediaRecorder?.stop()
+      stopRecognition()
+      stopSpeaker()
       setIsRecording(false)
       setMediaRecorder(null)
     }
   }
-
-  // Remove handleChatSend function
 
   return (
     <div className="w-fit">
@@ -92,9 +100,6 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
             </button>
           </div>
         </div>
-
-        {/* Screenshot */}
-        {/* Removed screenshot button from main bar for seamless screenshot-to-LLM UX */}
 
         {/* Solve Command */}
         {screenshots.length > 0 && (
@@ -147,9 +152,6 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
             ⚙️ Models
           </button>
         </div>
-
-        {/* Add this button in the main button row, before the separator and sign out */}
-        {/* Remove the Chat button */}
 
         {/* Question mark with tooltip */}
         <div
@@ -244,14 +246,20 @@ const QueueCommands: React.FC<QueueCommandsProps> = ({
           <IoLogOutOutline className="w-4 h-4" />
         </button>
       </div>
+      {/* Transcription Display */}
+      <TranscriptionDisplay
+        entries={entries}
+        micInterim={interimText}
+        speakerInterim={speakerInterim}
+        isListening={isListening}
+        isSpeakerListening={isSpeakerListening}
+      />
       {/* Audio Result Display */}
       {audioResult && (
         <div className="mt-2 p-2 bg-white/10 rounded text-white text-xs max-w-md">
           <span className="font-semibold">Audio Result:</span> {audioResult}
         </div>
       )}
-      {/* Chat Dialog Overlay */}
-      {/* Remove the Dialog component */}
     </div>
   )
 }

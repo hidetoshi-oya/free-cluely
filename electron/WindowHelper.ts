@@ -101,6 +101,13 @@ export class WindowHelper {
     // this.mainWindow.webContents.openDevTools()
     this.mainWindow.setContentProtection(true)
 
+    // Allow renderer to capture system audio via getDisplayMedia
+    this.mainWindow.webContents.session.setDisplayMediaRequestHandler(
+      (_request, callback) => {
+        callback({ video: null, audio: "loopback" } as any)
+      }
+    )
+
     if (process.platform === "darwin") {
       this.mainWindow.setVisibleOnAllWorkspaces(true, {
         visibleOnFullScreen: true

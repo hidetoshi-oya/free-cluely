@@ -1,4 +1,4 @@
-export interface ElectronAPI {
+interface ElectronAPI {
   updateContentDimensions: (dimensions: {
     width: number
     height: number
@@ -24,12 +24,26 @@ export interface ElectronAPI {
   moveWindowDown: () => Promise<void>
   analyzeAudioFromBase64: (data: string, mimeType: string) => Promise<{ text: string; timestamp: number }>
   analyzeAudioFile: (path: string) => Promise<{ text: string; timestamp: number }>
+  analyzeImageFile: (path: string) => Promise<void>
   quitApp: () => Promise<void>
+
+  // LLM Model Management
+  getCurrentLlmConfig: () => Promise<{ provider: "ollama" | "gemini"; model: string; isOllama: boolean }>
+  getAvailableOllamaModels: () => Promise<string[]>
+  switchToOllama: (model?: string, url?: string) => Promise<{ success: boolean; error?: string }>
+  switchToGemini: (apiKey?: string) => Promise<{ success: boolean; error?: string }>
+  testLlmConnection: () => Promise<{ success: boolean; error?: string }>
+
+  // Speaker transcription (Gemini Live API)
+  startSpeakerTranscription: (language: string) => Promise<{ success: boolean; error?: string }>
+  stopSpeakerTranscription: () => Promise<{ success: boolean }>
+  sendSpeakerAudioChunk: (base64Pcm: string) => void
+  onSpeakerTranscription: (callback: (data: { text: string; isFinal: boolean; timestamp: number }) => void) => () => void
+  onSpeakerTranscriptionStatus: (callback: (data: { status: "connected" | "disconnected" }) => void) => () => void
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
-declare global {
-  interface Window {
-    electronAPI: ElectronAPI
-  }
-} 
+interface Window {
+  electronAPI: ElectronAPI
+}

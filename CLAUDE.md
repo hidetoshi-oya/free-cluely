@@ -39,6 +39,8 @@ src/               → Reactレンダラープロセス
 | `pnpm build` | プロダクションビルド |
 | `pnpm dist` | Electronパッケージング（release/） |
 | `pnpm clean` | dist, dist-electron削除 |
+| `pnpm test` | テスト実行（watchモード） |
+| `pnpm test:run` | テスト実行（単発） |
 
 ## コーディング規約
 
@@ -54,4 +56,4 @@ src/               → Reactレンダラープロセス
 - `.env`にAPIキー（GEMINI_API_KEY等）→ **絶対にコミットしない**
 - `renderer/`は旧コード（未使用）→触らない
 - tsconfig: `tsconfig.json`（React/Vite用）と `electron/tsconfig.json`（Electron用）は別
-- テスト未導入（Jest/Vitest等なし）
+- テスト: Vitest（TDDで開発。詳細は `.claude/rules/tdd.md`）

@@ -4,6 +4,7 @@ import { WindowHelper } from "./WindowHelper"
 import { ScreenshotHelper } from "./ScreenshotHelper"
 import { ShortcutsHelper } from "./shortcuts"
 import { ProcessingHelper } from "./ProcessingHelper"
+import { LiveTranscriptionHelper } from "./LiveTranscriptionHelper"
 
 export class AppState {
   private static instance: AppState | null = null
@@ -12,6 +13,7 @@ export class AppState {
   private screenshotHelper: ScreenshotHelper
   public shortcutsHelper: ShortcutsHelper
   public processingHelper: ProcessingHelper
+  private liveTranscriptionHelper: LiveTranscriptionHelper | null = null
   private tray: Tray | null = null
 
   // View management
@@ -183,37 +185,18 @@ export class AppState {
   }
 
   public createTray(): void {
-    // Create a simple tray icon
-    const image = nativeImage.createEmpty()
-    
-    // Try to use a system template image for better integration
-    let trayImage = image
-    try {
-      // Create a minimal icon - just use an empty image and set the title
-      trayImage = nativeImage.createFromBuffer(Buffer.alloc(0))
-    } catch (error) {
-      console.log("Using empty tray image")
-      trayImage = nativeImage.createEmpty()
-    }
-    
-    this.tray = new Tray(trayImage)
+    this.tray = new Tray(nativeImage.createEmpty())
     
     const contextMenu = Menu.buildFromTemplate([
       {
         label: 'Show Interview Coder',
-        click: () => {
-          this.centerAndShowWindow()
-        }
+        click: () => this.centerAndShowWindow()
       },
       {
         label: 'Toggle Window',
-        click: () => {
-          this.toggleMainWindow()
-        }
+        click: () => this.toggleMainWindow()
       },
-      {
-        type: 'separator'
-      },
+      { type: 'separator' },
       {
         label: 'Take Screenshot (Cmd+H)',
         click: async () => {
@@ -232,15 +215,11 @@ export class AppState {
           }
         }
       },
-      {
-        type: 'separator'
-      },
+      { type: 'separator' },
       {
         label: 'Quit',
         accelerator: 'Command+Q',
-        click: () => {
-          app.quit()
-        }
+        click: () => app.quit()
       }
     ])
     
@@ -265,39 +244,45 @@ export class AppState {
   public getHasDebugged(): boolean {
     return this.hasDebugged
   }
+
+  public getLiveTranscriptionHelper(): LiveTranscriptionHelper | null {
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) return null
+    this.liveTranscriptionHelper ??= new LiveTranscriptionHelper(apiKey)
+    return this.liveTranscriptionHelper
+  }
 }
 
-// Application initialization
-async function initializeApp() {
+async function initializeApp(): Promise<void> {
   const appState = AppState.getInstance()
 
-  // Initialize IPC handlers before window creation
   initializeIpcHandlers(appState)
 
-  app.whenReady().then(() => {
-    console.log("App is ready")
-    appState.createWindow()
-    appState.createTray()
-    // Register global shortcuts using ShortcutsHelper
-    appState.shortcutsHelper.registerGlobalShortcuts()
-  })
+  app.dock?.hide()
+  app.commandLine.appendSwitch("disable-background-timer-throttling")
+
+  await app.whenReady()
+
+  console.log("App is ready")
+  appState.createWindow()
+  appState.createTray()
+  appState.shortcutsHelper.registerGlobalShortcuts()
 
   app.on("activate", () => {
-    console.log("App activated")
     if (appState.getMainWindow() === null) {
       appState.createWindow()
     }
   })
 
-  // Quit when all windows are closed, except on macOS
+  app.on("before-quit", async () => {
+    await appState.getLiveTranscriptionHelper()?.disconnect()
+  })
+
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
       app.quit()
     }
   })
-
-  app.dock?.hide() // Hide dock icon (optional)
-  app.commandLine.appendSwitch("disable-background-timer-throttling")
 }
 
 // Start the application
