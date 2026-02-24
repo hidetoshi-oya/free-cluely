@@ -322,4 +322,54 @@ export function initializeIpcHandlers(appState: AppState): void {
       return { success: false, error: error.message }
     }
   })
+
+  // === Playbook API (Phase 3) ===
+
+  ipcMain.handle("list-playbooks", async () => {
+    return appState.playbookHelper.listPlaybooks()
+  })
+
+  ipcMain.handle("get-playbook", async (_, id: string) => {
+    return appState.playbookHelper.getPlaybook(id)
+  })
+
+  ipcMain.handle("create-playbook", async (_, input: any) => {
+    try {
+      const playbook = appState.playbookHelper.createPlaybook(input)
+      return { success: true, playbook }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("update-playbook", async (_, id: string, partial: any) => {
+    const result = appState.playbookHelper.updatePlaybook(id, partial)
+    return result ? { success: true, playbook: result } : { success: false, error: "Cannot update" }
+  })
+
+  ipcMain.handle("delete-playbook", async (_, id: string) => {
+    return { success: appState.playbookHelper.deletePlaybook(id) }
+  })
+
+  // === Coaching API (Phase 3) ===
+
+  ipcMain.handle("evaluate-coaching", async (_, statement: string, playbookId: string) => {
+    try {
+      const playbook = appState.playbookHelper.getPlaybook(playbookId)
+      if (!playbook) return { advice: null, error: "Playbook not found" }
+      const advice = await appState.coachingHelper.evaluateStatement(statement, playbook)
+      return { advice }
+    } catch (error: any) {
+      return { advice: null, error: error.message }
+    }
+  })
+
+  ipcMain.handle("generate-quick-responses", async (_, question: string, context: string) => {
+    try {
+      const responses = await appState.coachingHelper.generateQuickResponses(question, context)
+      return { responses }
+    } catch (error: any) {
+      return { responses: [], error: error.message }
+    }
+  })
 }

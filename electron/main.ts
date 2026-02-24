@@ -8,6 +8,8 @@ import { LiveTranscriptionHelper } from "./LiveTranscriptionHelper"
 import { SettingsHelper } from "./SettingsHelper"
 import { StorageHelper } from "./StorageHelper"
 import { MeetingHelper } from "./MeetingHelper"
+import { PlaybookHelper } from "./PlaybookHelper"
+import { CoachingHelper } from "./CoachingHelper"
 
 export class AppState {
   private static instance: AppState | null = null
@@ -19,6 +21,8 @@ export class AppState {
   public settingsHelper: SettingsHelper
   public storageHelper: StorageHelper
   public meetingHelper: MeetingHelper
+  public playbookHelper: PlaybookHelper
+  public coachingHelper: CoachingHelper
   private liveTranscriptionHelper: LiveTranscriptionHelper | null = null
   private tray: Tray | null = null
 
@@ -61,12 +65,14 @@ export class AppState {
     this.processingHelper = new ProcessingHelper(this)
     this.shortcutsHelper = new ShortcutsHelper(this)
 
-    // MeetingHelper uses the active LLM provider's chat function
+    // Shared chat function using the active LLM provider
     const chatFn = async (prompt: string) => {
       const registry = this.processingHelper.getLLMHelper().getRegistry()
       return registry.chat(prompt)
     }
     this.meetingHelper = new MeetingHelper(this.storageHelper, chatFn)
+    this.playbookHelper = new PlaybookHelper()
+    this.coachingHelper = new CoachingHelper(chatFn)
   }
 
   public static getInstance(): AppState {

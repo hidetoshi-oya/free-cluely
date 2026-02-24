@@ -64,6 +64,17 @@ interface ElectronAPI {
   onMeetingContextUpdate: (callback: (data: any) => void) => () => void
   onMeetingError: (callback: (error: string) => void) => () => void
 
+  // Playbook Management (Phase 3)
+  listPlaybooks: () => Promise<any[]>
+  getPlaybook: (id: string) => Promise<any>
+  createPlaybook: (input: any) => Promise<{ success: boolean; playbook?: any; error?: string }>
+  updatePlaybook: (id: string, partial: any) => Promise<{ success: boolean; playbook?: any; error?: string }>
+  deletePlaybook: (id: string) => Promise<{ success: boolean }>
+
+  // Coaching API (Phase 3)
+  evaluateCoaching: (statement: string, playbookId: string) => Promise<{ advice: string | null; error?: string }>
+  generateQuickResponses: (question: string, context: string) => Promise<{ responses: string[]; error?: string }>
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 

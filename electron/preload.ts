@@ -72,6 +72,17 @@ interface ElectronAPI {
   onMeetingContextUpdate: (callback: (data: any) => void) => () => void
   onMeetingError: (callback: (error: string) => void) => () => void
 
+  // Playbook Management (Phase 3)
+  listPlaybooks: () => Promise<any[]>
+  getPlaybook: (id: string) => Promise<any>
+  createPlaybook: (input: any) => Promise<{ success: boolean; playbook?: any; error?: string }>
+  updatePlaybook: (id: string, partial: any) => Promise<{ success: boolean; playbook?: any; error?: string }>
+  deletePlaybook: (id: string) => Promise<{ success: boolean }>
+
+  // Coaching API (Phase 3)
+  evaluateCoaching: (statement: string, playbookId: string) => Promise<{ advice: string | null; error?: string }>
+  generateQuickResponses: (question: string, context: string) => Promise<{ responses: string[]; error?: string }>
+
   invoke: (channel: string, ...args: any[]) => Promise<any>
 }
 
@@ -165,6 +176,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   addTranscriptionEntry: (meetingId: string, entry: any) => ipcRenderer.invoke("add-transcription-entry", meetingId, entry),
   onMeetingContextUpdate: onIpcEvent<any>("meeting-context-update"),
   onMeetingError: onIpcEvent<string>("meeting-error"),
+
+  // Playbook Management (Phase 3)
+  listPlaybooks: () => ipcRenderer.invoke("list-playbooks"),
+  getPlaybook: (id: string) => ipcRenderer.invoke("get-playbook", id),
+  createPlaybook: (input: any) => ipcRenderer.invoke("create-playbook", input),
+  updatePlaybook: (id: string, partial: any) => ipcRenderer.invoke("update-playbook", id, partial),
+  deletePlaybook: (id: string) => ipcRenderer.invoke("delete-playbook", id),
+
+  // Coaching API (Phase 3)
+  evaluateCoaching: (statement: string, playbookId: string) => ipcRenderer.invoke("evaluate-coaching", statement, playbookId),
+  generateQuickResponses: (question: string, context: string) => ipcRenderer.invoke("generate-quick-responses", question, context),
 
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args)
 } as ElectronAPI)

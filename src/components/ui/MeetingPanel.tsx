@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useMeeting } from '../../hooks/useMeeting'
+import PlaybookSelector from './PlaybookSelector'
+import QuickResponses from './QuickResponses'
 
 function formatDuration(startedAt: number): string {
   const elapsed = Math.floor((Date.now() - startedAt) / 1000)
@@ -23,6 +25,10 @@ const MeetingPanel: React.FC = () => {
 
   const [elapsed, setElapsed] = useState('00:00:00')
   const [title, setTitle] = useState('')
+  const [activePlaybookId, setActivePlaybookId] = useState('general')
+  const [coachingAdvice, setCoachingAdvice] = useState<string | null>(null)
+  const [quickResponses, setQuickResponses] = useState<string[]>([])
+  const [isQuickLoading, setIsQuickLoading] = useState(false)
 
   // Update elapsed time every second during active meeting
   useEffect(() => {
@@ -38,8 +44,12 @@ const MeetingPanel: React.FC = () => {
     setTitle('')
   }
 
+  const handleCopyResponse = (text: string) => {
+    navigator.clipboard.writeText(text).catch(console.error)
+  }
+
   if (!meeting) {
-    // No active meeting — show start form
+    // No active meeting — show start form with playbook selection
     return (
       <div className="p-3 bg-black/40 backdrop-blur-md rounded-lg border border-white/15 space-y-3">
         <h3 className="text-sm font-semibold text-gray-200">Meeting</h3>
@@ -50,6 +60,10 @@ const MeetingPanel: React.FC = () => {
           onChange={(e) => setTitle(e.target.value)}
           className="w-full px-3 py-2 text-xs bg-black/30 border border-white/15 rounded text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-400/60"
           onKeyDown={(e) => e.key === 'Enter' && handleStart()}
+        />
+        <PlaybookSelector
+          activePlaybookId={activePlaybookId}
+          onSelect={setActivePlaybookId}
         />
         <button
           onClick={handleStart}
@@ -88,6 +102,20 @@ const MeetingPanel: React.FC = () => {
         {meeting.entryCount} transcription entries
       </div>
 
+      {/* Coaching Advice (inline) */}
+      {coachingAdvice && (
+        <div className="text-xs text-amber-300 bg-amber-900/20 p-2 rounded border border-amber-500/20">
+          <span className="font-medium">Coach:</span> {coachingAdvice}
+        </div>
+      )}
+
+      {/* Quick Responses */}
+      <QuickResponses
+        responses={quickResponses}
+        isLoading={isQuickLoading}
+        onCopy={handleCopyResponse}
+      />
+
       {/* Summary */}
       {meeting.summary && (
         <div className="space-y-1">
@@ -119,6 +147,14 @@ const MeetingPanel: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Playbook selector (compact, during active meeting) */}
+      {isActive && (
+        <PlaybookSelector
+          activePlaybookId={activePlaybookId}
+          onSelect={setActivePlaybookId}
+        />
       )}
 
       {/* Error */}
