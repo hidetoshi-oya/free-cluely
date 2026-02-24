@@ -27,12 +27,21 @@ interface ElectronAPI {
   analyzeImageFile: (path: string) => Promise<void>
   quitApp: () => Promise<void>
 
-  // LLM Model Management
+  // LLM Model Management (legacy)
   getCurrentLlmConfig: () => Promise<{ provider: "ollama" | "gemini"; model: string; isOllama: boolean }>
   getAvailableOllamaModels: () => Promise<string[]>
   switchToOllama: (model?: string, url?: string) => Promise<{ success: boolean; error?: string }>
   switchToGemini: (apiKey?: string) => Promise<{ success: boolean; error?: string }>
   testLlmConnection: () => Promise<{ success: boolean; error?: string }>
+
+  // Multi-Provider API
+  getSettings: () => Promise<any>
+  updateSettings: (partial: Record<string, any>) => Promise<{ success: boolean; error?: string }>
+  getAvailableProviders: () => Promise<Array<{ id: string; name: string; supportsVision: boolean; supportsAudio: boolean }>>
+  setProviderApiKey: (providerId: string, apiKey: string) => Promise<{ success: boolean; error?: string }>
+  setActiveProvider: (providerId: string, config?: { model?: string; apiKey?: string; url?: string }) => Promise<{ success: boolean; error?: string }>
+  testProviderConnection: (providerId?: string) => Promise<{ success: boolean; error?: string }>
+  getProviderModels: (providerId: string) => Promise<Array<{ id: string; name: string; supportsVision: boolean; supportsAudio: boolean }>>
 
   // Speaker transcription (Gemini Live API)
   startSpeakerTranscription: (language: string) => Promise<{ success: boolean; error?: string }>

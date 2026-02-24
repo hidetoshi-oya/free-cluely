@@ -35,12 +35,21 @@ interface ElectronAPI {
   analyzeImageFile: (path: string) => Promise<void>
   quitApp: () => Promise<void>
 
-  // LLM Model Management
+  // LLM Model Management (legacy)
   getCurrentLlmConfig: () => Promise<{ provider: "ollama" | "gemini"; model: string; isOllama: boolean }>
   getAvailableOllamaModels: () => Promise<string[]>
   switchToOllama: (model?: string, url?: string) => Promise<{ success: boolean; error?: string }>
   switchToGemini: (apiKey?: string) => Promise<{ success: boolean; error?: string }>
   testLlmConnection: () => Promise<{ success: boolean; error?: string }>
+
+  // Multi-Provider API
+  getSettings: () => Promise<any>
+  updateSettings: (partial: Record<string, any>) => Promise<{ success: boolean; error?: string }>
+  getAvailableProviders: () => Promise<Array<{ id: string; name: string; supportsVision: boolean; supportsAudio: boolean }>>
+  setProviderApiKey: (providerId: string, apiKey: string) => Promise<{ success: boolean; error?: string }>
+  setActiveProvider: (providerId: string, config?: { model?: string; apiKey?: string; url?: string }) => Promise<{ success: boolean; error?: string }>
+  testProviderConnection: (providerId?: string) => Promise<{ success: boolean; error?: string }>
+  getProviderModels: (providerId: string) => Promise<Array<{ id: string; name: string; supportsVision: boolean; supportsAudio: boolean }>>
 
   // Speaker transcription (Gemini Live API)
   startSpeakerTranscription: (language: string) => Promise<{ success: boolean; error?: string }>
@@ -106,12 +115,21 @@ contextBridge.exposeInMainWorld("electronAPI", {
   analyzeImageFile: (path: string) => ipcRenderer.invoke("analyze-image-file", path),
   quitApp: () => ipcRenderer.invoke("quit-app"),
 
-  // LLM Model Management
+  // LLM Model Management (legacy)
   getCurrentLlmConfig: () => ipcRenderer.invoke("get-current-llm-config"),
   getAvailableOllamaModels: () => ipcRenderer.invoke("get-available-ollama-models"),
   switchToOllama: (model?: string, url?: string) => ipcRenderer.invoke("switch-to-ollama", model, url),
   switchToGemini: (apiKey?: string) => ipcRenderer.invoke("switch-to-gemini", apiKey),
   testLlmConnection: () => ipcRenderer.invoke("test-llm-connection"),
+
+  // Multi-Provider API (Phase 1.3)
+  getSettings: () => ipcRenderer.invoke("get-settings"),
+  updateSettings: (partial: Record<string, any>) => ipcRenderer.invoke("update-settings", partial),
+  getAvailableProviders: () => ipcRenderer.invoke("get-available-providers"),
+  setProviderApiKey: (providerId: string, apiKey: string) => ipcRenderer.invoke("set-provider-api-key", providerId, apiKey),
+  setActiveProvider: (providerId: string, config?: { model?: string; apiKey?: string; url?: string }) => ipcRenderer.invoke("set-active-provider", providerId, config),
+  testProviderConnection: (providerId?: string) => ipcRenderer.invoke("test-provider-connection", providerId),
+  getProviderModels: (providerId: string) => ipcRenderer.invoke("get-provider-models", providerId),
 
   // Speaker transcription (Gemini Live API)
   startSpeakerTranscription: (language: string) => ipcRenderer.invoke("start-speaker-transcription", language),

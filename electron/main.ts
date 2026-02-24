@@ -5,6 +5,7 @@ import { ScreenshotHelper } from "./ScreenshotHelper"
 import { ShortcutsHelper } from "./shortcuts"
 import { ProcessingHelper } from "./ProcessingHelper"
 import { LiveTranscriptionHelper } from "./LiveTranscriptionHelper"
+import { SettingsHelper } from "./SettingsHelper"
 
 export class AppState {
   private static instance: AppState | null = null
@@ -13,6 +14,7 @@ export class AppState {
   private screenshotHelper: ScreenshotHelper
   public shortcutsHelper: ShortcutsHelper
   public processingHelper: ProcessingHelper
+  public settingsHelper: SettingsHelper
   private liveTranscriptionHelper: LiveTranscriptionHelper | null = null
   private tray: Tray | null = null
 
@@ -48,16 +50,10 @@ export class AppState {
   } as const
 
   constructor() {
-    // Initialize WindowHelper with this
+    this.settingsHelper = new SettingsHelper()
     this.windowHelper = new WindowHelper(this)
-
-    // Initialize ScreenshotHelper
     this.screenshotHelper = new ScreenshotHelper(this.view)
-
-    // Initialize ProcessingHelper
     this.processingHelper = new ProcessingHelper(this)
-
-    // Initialize ShortcutsHelper
     this.shortcutsHelper = new ShortcutsHelper(this)
   }
 

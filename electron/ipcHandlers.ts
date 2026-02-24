@@ -1,5 +1,6 @@
 import { ipcMain, app } from "electron"
 import { AppState } from "./main"
+import { GeminiProvider, OpenAIProvider, ClaudeProvider, OllamaProvider } from "./llm"
 
 export function initializeIpcHandlers(appState: AppState): void {
   ipcMain.handle(
@@ -144,5 +145,106 @@ export function initializeIpcHandlers(appState: AppState): void {
 
   ipcMain.on("speaker-audio-chunk", (_event, base64Pcm: string) => {
     appState.getLiveTranscriptionHelper()?.sendAudioChunk(base64Pcm)
+  })
+
+  // === Multi-Provider Settings API (Phase 1.3) ===
+
+  ipcMain.handle("get-settings", async () => {
+    return appState.settingsHelper.getAll()
+  })
+
+  ipcMain.handle("update-settings", async (_, partial: Record<string, any>) => {
+    try {
+      appState.settingsHelper.updateAll(partial)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("get-available-providers", async () => {
+    return [
+      { id: "gemini", name: "Google Gemini", supportsVision: true, supportsAudio: true },
+      { id: "openai", name: "OpenAI", supportsVision: true, supportsAudio: false },
+      { id: "claude", name: "Anthropic Claude", supportsVision: true, supportsAudio: false },
+      { id: "ollama", name: "Ollama (Local)", supportsVision: true, supportsAudio: false },
+    ]
+  })
+
+  ipcMain.handle("set-provider-api-key", async (_, providerId: string, apiKey: string) => {
+    try {
+      if (providerId === "ollama") {
+        return { success: false, error: "Ollama does not use API keys" }
+      }
+      appState.settingsHelper.setApiKey(providerId as "gemini" | "openai" | "claude", apiKey)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("set-active-provider", async (_, providerId: string, config?: { model?: string; apiKey?: string; url?: string }) => {
+    try {
+      const llmHelper = appState.processingHelper.getLLMHelper()
+      const registry = llmHelper.getRegistry()
+
+      if (providerId === "gemini") {
+        const apiKey = config?.apiKey || appState.settingsHelper.getApiKey("gemini") || process.env.GEMINI_API_KEY
+        if (!apiKey) return { success: false, error: "No Gemini API key configured" }
+        registry.register(new GeminiProvider(apiKey, config?.model))
+        registry.setActiveProvider("gemini")
+      } else if (providerId === "openai") {
+        const apiKey = config?.apiKey || appState.settingsHelper.getApiKey("openai")
+        if (!apiKey) return { success: false, error: "No OpenAI API key configured" }
+        registry.register(new OpenAIProvider(apiKey, config?.model))
+        registry.setActiveProvider("openai")
+      } else if (providerId === "claude") {
+        const apiKey = config?.apiKey || appState.settingsHelper.getApiKey("claude")
+        if (!apiKey) return { success: false, error: "No Claude API key configured" }
+        registry.register(new ClaudeProvider(apiKey, config?.model))
+        registry.setActiveProvider("claude")
+      } else if (providerId === "ollama") {
+        const url = config?.url || "http://localhost:11434"
+        registry.register(new OllamaProvider(config?.model || "llama3.2", url))
+        registry.setActiveProvider("ollama")
+      } else {
+        return { success: false, error: `Unknown provider: ${providerId}` }
+      }
+
+      // Persist
+      appState.settingsHelper.set("activeProvider", providerId)
+      if (config?.apiKey && providerId !== "ollama") {
+        appState.settingsHelper.setApiKey(providerId as "gemini" | "openai" | "claude", config.apiKey)
+      }
+
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("test-provider-connection", async (_, providerId?: string) => {
+    try {
+      if (!providerId) {
+        return appState.processingHelper.getLLMHelper().testConnection()
+      }
+      const registry = appState.processingHelper.getLLMHelper().getRegistry()
+      const provider = registry.getProvider(providerId)
+      if (!provider) return { success: false, error: `Provider "${providerId}" not registered` }
+      return provider.testConnection()
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle("get-provider-models", async (_, providerId: string) => {
+    try {
+      const registry = appState.processingHelper.getLLMHelper().getRegistry()
+      const provider = registry.getProvider(providerId)
+      if (!provider) return []
+      return provider.getAvailableModels()
+    } catch {
+      return []
+    }
   })
 }
