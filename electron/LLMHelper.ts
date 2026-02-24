@@ -1,107 +1,76 @@
-import { GoogleGenAI } from "@google/genai"
 import fs from "fs"
-
-interface OllamaResponse {
-  response: string
-  done: boolean
-}
-
-const GEMINI_MODEL = "gemini-2.5-flash"
+import { ProviderRegistry, GeminiProvider, OllamaProvider } from "./llm"
 
 export class LLMHelper {
-  private client: GoogleGenAI | null = null
+  private registry: ProviderRegistry
+  private geminiProvider: GeminiProvider | null = null
+  private ollamaProvider: OllamaProvider | null = null
+
   private readonly systemPrompt = `You are Wingman AI, a helpful, proactive assistant for any kind of problem or situation (not just coding). For any user input, analyze the situation, provide a clear problem statement, relevant context, and suggest several possible responses or actions the user could take next. Always explain your reasoning. Present your suggestions as a list of options or next steps.`
-  private useOllama: boolean = false
-  private ollamaModel: string = "llama3.2"
-  private ollamaUrl: string = "http://localhost:11434"
 
   constructor(apiKey?: string, useOllama: boolean = false, ollamaModel?: string, ollamaUrl?: string) {
-    this.useOllama = useOllama
+    this.registry = new ProviderRegistry()
 
     if (useOllama) {
-      this.ollamaUrl = ollamaUrl || "http://localhost:11434"
-      this.ollamaModel = ollamaModel || "gemma:latest"
-      console.log(`[LLMHelper] Using Ollama with model: ${this.ollamaModel}`)
+      this.ollamaProvider = new OllamaProvider(
+        ollamaModel || "gemma:latest",
+        ollamaUrl || "http://localhost:11434"
+      )
+      this.registry.register(this.ollamaProvider)
+      console.log(`[LLMHelper] Using Ollama with model: ${this.ollamaProvider.config.model}`)
       this.initializeOllamaModel()
     } else if (apiKey) {
-      this.client = new GoogleGenAI({ apiKey })
+      this.geminiProvider = new GeminiProvider(apiKey)
+      this.registry.register(this.geminiProvider)
       console.log("[LLMHelper] Using Google Gemini")
     } else {
       throw new Error("Either provide Gemini API key or enable Ollama mode")
     }
   }
 
+  public getRegistry(): ProviderRegistry {
+    return this.registry
+  }
+
   private cleanJsonResponse(text: string): string {
-    text = text.replace(/^```(?:json)?\n/, '').replace(/\n```$/, '')
-    text = text.trim()
-    return text
+    text = text.replace(/^```(?:json)?\n/, "").replace(/\n```$/, "")
+    return text.trim()
   }
 
-  private async geminiGenerate(prompt: string | object[]): Promise<string> {
-    if (!this.client) throw new Error("No Gemini client configured")
-    const result = await this.client.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
-    })
-    return result.text ?? ""
-  }
-
-  private async callOllama(prompt: string): Promise<string> {
-    try {
-      const response = await fetch(`${this.ollamaUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: this.ollamaModel,
-          prompt,
-          stream: false,
-          options: { temperature: 0.7, top_p: 0.9 },
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Ollama API error: ${response.status} ${response.statusText}`)
-      }
-
-      const data: OllamaResponse = await response.json()
-      return data.response
-    } catch (error) {
-      console.error("[LLMHelper] Error calling Ollama:", error)
-      throw new Error(`Failed to connect to Ollama: ${(error as Error).message}. Make sure Ollama is running on ${this.ollamaUrl}`)
+  private async generate(contents: string | object[]): Promise<string> {
+    if (this.geminiProvider) {
+      return this.geminiProvider.generate(contents)
     }
-  }
-
-  private async checkOllamaAvailable(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.ollamaUrl}/api/tags`)
-      return response.ok
-    } catch {
-      return false
+    if (typeof contents === "string") {
+      return this.registry.chat(contents)
     }
+    throw new Error("Multimodal content requires Gemini provider")
   }
 
   private async initializeOllamaModel(): Promise<void> {
+    if (!this.ollamaProvider) return
     try {
-      const availableModels = await this.getOllamaModels()
-      if (availableModels.length === 0) {
+      const models = await this.ollamaProvider.getAvailableModels()
+      if (models.length === 0) {
         console.warn("[LLMHelper] No Ollama models found")
         return
       }
 
-      if (!availableModels.includes(this.ollamaModel)) {
-        this.ollamaModel = availableModels[0]
-        console.log(`[LLMHelper] Auto-selected first available model: ${this.ollamaModel}`)
+      const currentModel = this.ollamaProvider.config.model
+      if (!models.some((m) => m.id === currentModel)) {
+        this.ollamaProvider.setModel(models[0].id)
+        console.log(`[LLMHelper] Auto-selected first available model: ${models[0].id}`)
       }
 
-      const testResult = await this.callOllama("Hello")
-      console.log(`[LLMHelper] Successfully initialized with model: ${this.ollamaModel}`)
+      await this.ollamaProvider.chat("Hello")
+      console.log(`[LLMHelper] Successfully initialized with model: ${this.ollamaProvider.config.model}`)
     } catch (error) {
       console.error(`[LLMHelper] Failed to initialize Ollama model: ${(error as Error).message}`)
       try {
-        const models = await this.getOllamaModels()
+        const models = await this.ollamaProvider.getAvailableModels()
         if (models.length > 0) {
-          this.ollamaModel = models[0]
-          console.log(`[LLMHelper] Fallback to: ${this.ollamaModel}`)
+          this.ollamaProvider.setModel(models[0].id)
+          console.log(`[LLMHelper] Fallback to: ${models[0].id}`)
         }
       } catch (fallbackError) {
         console.error(`[LLMHelper] Fallback also failed: ${(fallbackError as Error).message}`)
@@ -112,20 +81,18 @@ export class LLMHelper {
   public async extractProblemFromImages(imagePaths: string[]) {
     try {
       const imageParts = await Promise.all(
-        imagePaths.map(async (path) => {
-          const imageData = await fs.promises.readFile(path)
-          return { inlineData: { data: imageData.toString("base64"), mimeType: "image/png" } }
+        imagePaths.map(async (p) => {
+          const data = await fs.promises.readFile(p)
+          return { inlineData: { data: data.toString("base64"), mimeType: "image/png" } }
         })
       )
-
       const prompt = `${this.systemPrompt}\n\nYou are a wingman. Please analyze these images and extract the following information in JSON format:\n{
   "problem_statement": "A clear statement of the problem or situation depicted in the images.",
   "context": "Relevant background or context from the images.",
   "suggested_responses": ["First possible answer or action", "Second possible answer or action", "..."],
   "reasoning": "Explanation of why these suggestions are appropriate."
 }\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
-
-      const text = await this.geminiGenerate([{ text: prompt }, ...imageParts])
+      const text = await this.generate([{ text: prompt }, ...imageParts])
       return JSON.parse(this.cleanJsonResponse(text))
     } catch (error) {
       console.error("Error extracting problem from images:", error)
@@ -146,7 +113,7 @@ export class LLMHelper {
 
     console.log("[LLMHelper] Calling Gemini LLM for solution...")
     try {
-      const text = await this.geminiGenerate(prompt)
+      const text = await this.generate(prompt)
       const parsed = JSON.parse(this.cleanJsonResponse(text))
       console.log("[LLMHelper] Parsed LLM response:", parsed)
       return parsed
@@ -159,12 +126,11 @@ export class LLMHelper {
   public async debugSolutionWithImages(problemInfo: any, currentCode: string, debugImagePaths: string[]) {
     try {
       const imageParts = await Promise.all(
-        debugImagePaths.map(async (path) => {
-          const imageData = await fs.promises.readFile(path)
-          return { inlineData: { data: imageData.toString("base64"), mimeType: "image/png" } }
+        debugImagePaths.map(async (p) => {
+          const data = await fs.promises.readFile(p)
+          return { inlineData: { data: data.toString("base64"), mimeType: "image/png" } }
         })
       )
-
       const prompt = `${this.systemPrompt}\n\nYou are a wingman. Given:\n1. The original problem or situation: ${JSON.stringify(problemInfo, null, 2)}\n2. The current response or approach: ${currentCode}\n3. The debug information in the provided images\n\nPlease analyze the debug information and provide feedback in this JSON format:\n{
   "solution": {
     "code": "The code or main answer here.",
@@ -174,8 +140,7 @@ export class LLMHelper {
     "reasoning": "Explanation of why these suggestions are appropriate."
   }
 }\nImportant: Return ONLY the JSON object, without any markdown formatting or code blocks.`
-
-      const text = await this.geminiGenerate([{ text: prompt }, ...imageParts])
+      const text = await this.generate([{ text: prompt }, ...imageParts])
       const parsed = JSON.parse(this.cleanJsonResponse(text))
       console.log("[LLMHelper] Parsed debug LLM response:", parsed)
       return parsed
@@ -190,7 +155,7 @@ export class LLMHelper {
       const audioData = await fs.promises.readFile(audioPath)
       const audioPart = { inlineData: { data: audioData.toString("base64"), mimeType: "audio/mp3" } }
       const prompt = `${this.systemPrompt}\n\nDescribe this audio clip in a short, concise answer. In addition to your main answer, suggest several possible actions or responses the user could take next based on the audio. Do not return a structured JSON object, just answer naturally as you would to a user.`
-      const text = await this.geminiGenerate([{ text: prompt }, audioPart])
+      const text = await this.generate([{ text: prompt }, audioPart])
       return { text, timestamp: Date.now() }
     } catch (error) {
       console.error("Error analyzing audio file:", error)
@@ -202,7 +167,7 @@ export class LLMHelper {
     try {
       const audioPart = { inlineData: { data, mimeType } }
       const prompt = `${this.systemPrompt}\n\nDescribe this audio clip in a short, concise answer. In addition to your main answer, suggest several possible actions or responses the user could take next based on the audio. Do not return a structured JSON object, just answer naturally as you would to a user and be concise.`
-      const text = await this.geminiGenerate([{ text: prompt }, audioPart])
+      const text = await this.generate([{ text: prompt }, audioPart])
       return { text, timestamp: Date.now() }
     } catch (error) {
       console.error("Error analyzing audio from base64:", error)
@@ -215,7 +180,7 @@ export class LLMHelper {
       const imageData = await fs.promises.readFile(imagePath)
       const imagePart = { inlineData: { data: imageData.toString("base64"), mimeType: "image/png" } }
       const prompt = `${this.systemPrompt}\n\nDescribe the content of this image in a short, concise answer. In addition to your main answer, suggest several possible actions or responses the user could take next based on the image. Do not return a structured JSON object, just answer naturally as you would to a user. Be concise and brief.`
-      const text = await this.geminiGenerate([{ text: prompt }, imagePart])
+      const text = await this.generate([{ text: prompt }, imagePart])
       return { text, timestamp: Date.now() }
     } catch (error) {
       console.error("Error analyzing image file:", error)
@@ -225,13 +190,7 @@ export class LLMHelper {
 
   public async chatWithGemini(message: string): Promise<string> {
     try {
-      if (this.useOllama) {
-        return this.callOllama(message)
-      } else if (this.client) {
-        return this.geminiGenerate(message)
-      } else {
-        throw new Error("No LLM provider configured")
-      }
+      return await this.registry.chat(message)
     } catch (error) {
       console.error("[LLMHelper] Error in chatWithGemini:", error)
       throw error
@@ -243,80 +202,56 @@ export class LLMHelper {
   }
 
   public isUsingOllama(): boolean {
-    return this.useOllama
+    return this.registry.getActiveProvider()?.config.id === "ollama"
   }
 
   public async getOllamaModels(): Promise<string[]> {
-    if (!this.useOllama) return []
-
-    try {
-      const response = await fetch(`${this.ollamaUrl}/api/tags`)
-      if (!response.ok) throw new Error('Failed to fetch models')
-
-      const data = await response.json()
-      return data.models?.map((model: any) => model.name) || []
-    } catch (error) {
-      console.error("[LLMHelper] Error fetching Ollama models:", error)
-      return []
-    }
+    if (!this.ollamaProvider) return []
+    const models = await this.ollamaProvider.getAvailableModels()
+    return models.map((m) => m.id)
   }
 
   public getCurrentProvider(): "ollama" | "gemini" {
-    return this.useOllama ? "ollama" : "gemini"
+    return this.isUsingOllama() ? "ollama" : "gemini"
   }
 
   public getCurrentModel(): string {
-    return this.useOllama ? this.ollamaModel : GEMINI_MODEL
+    const provider = this.registry.getActiveProvider()
+    return provider?.config.model ?? "unknown"
   }
 
   public async switchToOllama(model?: string, url?: string): Promise<void> {
-    this.useOllama = true
-    if (url) this.ollamaUrl = url
-
-    if (model) {
-      this.ollamaModel = model
+    if (!this.ollamaProvider) {
+      this.ollamaProvider = new OllamaProvider(model || "gemma:latest", url)
+      this.registry.register(this.ollamaProvider)
     } else {
+      if (model) this.ollamaProvider.setModel(model)
+    }
+    this.registry.setActiveProvider("ollama")
+
+    if (!model) {
       await this.initializeOllamaModel()
     }
 
-    console.log(`[LLMHelper] Switched to Ollama: ${this.ollamaModel} at ${this.ollamaUrl}`)
+    console.log(`[LLMHelper] Switched to Ollama: ${this.ollamaProvider.config.model} at ${this.ollamaProvider.getUrl()}`)
   }
 
   public async switchToGemini(apiKey?: string): Promise<void> {
     if (apiKey) {
-      this.client = new GoogleGenAI({ apiKey })
+      this.geminiProvider = new GeminiProvider(apiKey)
+      // Re-register to update the provider instance
+      this.registry.register(this.geminiProvider)
     }
 
-    if (!this.client && !apiKey) {
+    if (!this.geminiProvider && !apiKey) {
       throw new Error("No Gemini API key provided and no existing client instance")
     }
 
-    this.useOllama = false
+    this.registry.setActiveProvider("gemini")
     console.log("[LLMHelper] Switched to Gemini")
   }
 
   public async testConnection(): Promise<{ success: boolean; error?: string }> {
-    try {
-      if (this.useOllama) {
-        const available = await this.checkOllamaAvailable()
-        if (!available) {
-          return { success: false, error: `Ollama not available at ${this.ollamaUrl}` }
-        }
-        await this.callOllama("Hello")
-        return { success: true }
-      } else {
-        if (!this.client) {
-          return { success: false, error: "No Gemini model configured" }
-        }
-        const text = await this.geminiGenerate("Hello")
-        if (text) {
-          return { success: true }
-        } else {
-          return { success: false, error: "Empty response from Gemini" }
-        }
-      }
-    } catch (error) {
-      return { success: false, error: (error as Error).message }
-    }
+    return this.registry.testConnection()
   }
 }
