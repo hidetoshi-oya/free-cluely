@@ -87,7 +87,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onModelChange, onChatOpen
       if (result.success) {
         await loadCurrentConfig();
         setConnectionStatus('success');
-        onModelChange?.(selectedProvider, selectedProvider === 'ollama' ? selectedOllamaModel : 'gemini-2.0-flash');
+        onModelChange?.(selectedProvider, selectedProvider === 'ollama' ? selectedOllamaModel : 'gemini-2.5-flash');
         // Auto-open chat window after successful model change
         setTimeout(() => {
           onChatOpen?.();
@@ -245,6 +245,28 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ onModelChange, onChatOpen
         >
           Test
         </button>
+      </div>
+
+      {/* Speech Recognition Language */}
+      <div className="space-y-2 pt-2 border-t border-white/10">
+        <label className="text-xs font-medium text-gray-300">Speech Recognition Language</label>
+        <select
+          defaultValue={localStorage.getItem('speechRecognitionLang') || navigator.language || 'en-US'}
+          onChange={(e) => localStorage.setItem('speechRecognitionLang', e.target.value)}
+          className="w-full px-3 py-2 text-xs bg-black/30 border border-white/15 rounded text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/60"
+        >
+          <option value="ja-JP">日本語</option>
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="zh-CN">中文 (简体)</option>
+          <option value="zh-TW">中文 (繁體)</option>
+          <option value="ko-KR">한국어</option>
+          <option value="es-ES">Español</option>
+          <option value="fr-FR">Français</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="pt-BR">Português (BR)</option>
+        </select>
+        <div className="text-xs text-gray-500">Used for real-time transcription during voice recording</div>
       </div>
 
       {/* Help text */}
